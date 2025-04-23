@@ -40,7 +40,7 @@ A interface é simples, intuitiva e responsiva, com suporte a **modo escuro**.
 1. **Clone o repositório:**
 
 ```bash
-git clone https://github.com/seu-usuario/seu-repo.git
+git clone https://github.com/VBaldochi/AgendamentoDownload.git
 cd seu-repo
 ```
 
