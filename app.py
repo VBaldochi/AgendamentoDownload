@@ -15,8 +15,8 @@ USERNAME = 'admin'  # Nome de usuário padrão
 PASSWORD = 'senha123'  # Senha padrão
 
 # Configuração de notificação Telegram
-TELEGRAM_TOKEN = 'SEU_TOKEN_AQUI'
-TELEGRAM_CHAT_ID = 'SEU_CHAT_ID_AQUI'
+TELEGRAM_TOKEN = '7743417874:AAGG6lpG4KpLHnPMlJizN7bpqaJ4zifrSag'
+TELEGRAM_CHAT_ID = '345946900'
 
 # --- Configuração do app ---
 app = Flask(__name__)
@@ -24,7 +24,7 @@ app.secret_key = SECRET_KEY
 
 # --- Cliente qBittorrent ---
 client = qbittorrentapi.Client(host='localhost', port=8080,
-                               username='admin', password='adminadmin')
+                            username='admin', password='adminadmin')
 client.auth_log_in()
 
 # --- Função de notificação Telegram ---
