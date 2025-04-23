@@ -15,8 +15,8 @@ USERNAME = 'admin'  # Nome de usuário padrão
 PASSWORD = 'senha123'  # Senha padrão
 
 # Configuração de notificação Telegram
-TELEGRAM_TOKEN = '7743417874:AAGG6lpG4KpLHnPMlJizN7bpqaJ4zifrSag'
-TELEGRAM_CHAT_ID = '345946900'
+TELEGRAM_TOKEN = ''
+TELEGRAM_CHAT_ID = ''
 
 # --- Configuração do app ---
 app = Flask(__name__)
