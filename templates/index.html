@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agendador de Torrents</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { 
+      darkMode: 'class'
+    };
+  </script>
+  <style>
+    .theme-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color 0.3s ease;
+      color: #facc15; /* cor amarela para destaque */
+    }
+    .theme-toggle:hover {
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body id="body" class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen flex flex-col items-center justify-start p-4 transition-colors duration-300">
+
+  <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl w-full max-w-md mb-6">
+
+    <!-- Logout e botão de modo escuro -->
+    <div class="flex justify-between mb-4">
+      <a href="/logout" class="text-sm text-red-500 hover:underline font-semibold">Logout</a>
+      <button id="dark-mode-toggle" class="theme-toggle text-xl">
+        <span id="theme-icon">🌙</span>
+      </button>
+    </div>
+
+    <h1 class="text-2xl font-bold mb-4 text-center">🎯 Agendar Torrent</h1>
+
+    <!-- Formulário -->
+    <form method="POST" class="space-y-4 mb-6">
+      <input type="text" name="magnet" placeholder="Cole o magnet link aqui" required
+        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <input type="time" name="horario" required
+        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <button type="submit"
+        class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">Agendar</button>
+    </form>
+
+    <!-- Lista de agendamentos -->
+    <div class="mt-4">
+      <h2 class="text-lg font-semibold mb-2">⏳ Agendamentos</h2>
+      <ul class="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+        {% for s in schedules %}
+        <li class="flex justify-between items-center border-b border-gray-300 dark:border-gray-600 py-2">
+          <span><strong>{{ s.time }}</strong> - {{ s.magnet[:40] }}…</span>
+          <div class="space-x-2">
+            <button data-id="{{ s.id }}" class="edit-schedule text-blue-500 hover:underline text-xs">Editar</button>
+            <button data-id="{{ s.id }}" class="delete-schedule text-red-500 hover:underline text-xs">Excluir</button>
+          </div>
+        </li>
+        {% else %}
+        <li class="text-gray-500 dark:text-gray-400">Nenhum agendamento.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Filtros -->
+    <div class="mt-6 flex justify-around border-b border-gray-300 dark:border-gray-600 pb-2">
+      <button id="filter-scheduled" class="text-sm font-medium">Agendados</button>
+      <button id="filter-progress" class="text-sm font-medium">Em Andamento</button>
+      <button id="filter-completed" class="text-sm font-medium">Concluídos</button>
+    </div>
+  </div>
+
+  <!-- Cards de progresso -->
+  <div id="progresso-torrents" class="w-full max-w-md"></div>
+
+  <!-- Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const body = document.getElementById('body');
+      const toggleBtn = document.getElementById('dark-mode-toggle');
+      const themeIcon = document.getElementById('theme-icon');
+
+      const updateThemeIcon = () => {
+        const isDark = body.classList.contains('dark');
+        themeIcon.textContent = isDark ? '☀️' : '🌙';
+      };
+
+      toggleBtn.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        updateThemeIcon();
+      });
+
+      updateThemeIcon(); // define o ícone inicial
+
+      const progressoContainer = document.getElementById('progresso-torrents');
+      let currentFilter = 'progress';
+
+      async function fetchProgresso() {
+        const res = await fetch('/api/progresso');
+        return await res.json();
+      }
+
+      async function atualizarProgresso() {
+        const data = await fetchProgresso();
+        progressoContainer.innerHTML = '';
+
+        data.forEach(t => {
+          const isScheduled = t.agendado;
+          if ((currentFilter === 'progress' && t.percentual < 100) ||
+              (currentFilter === 'completed' && t.percentual >= 100) ||
+              (currentFilter === 'scheduled' && isScheduled)) {
+
+            const card = document.createElement('div');
+            card.className = 'p-4 bg-gray-200 dark:bg-gray-800 rounded-lg mb-3 flex flex-col space-y-1';
+            card.innerHTML = `
+              <div class="flex justify-between items-center">
+                <span class="font-semibold">${t.nome}</span>
+                <div>
+                  <button data-hash="${t.hash}" class="pause-btn text-xs mr-2">Pausar</button>
+                  <button data-hash="${t.hash}" class="resume-btn text-xs mr-2">Retomar</button>
+                  <button data-hash="${t.hash}" class="delete-btn text-xs text-red-500">Cancelar</button>
+                </div>
+              </div>
+              <div class="w-full bg-gray-300 dark:bg-gray-700 h-2 rounded mb-2">
+                <div class="bg-blue-500 h-2 rounded" style="width: ${t.percentual.toFixed(2)}%"></div>
+              </div>
+              <div class="text-xs dark:text-gray-300">
+                <p>Progresso: ${t.percentual.toFixed(2)}%</p>
+                <p>Velocidade: ${t.velocidade.toFixed(2)} KB/s</p>
+                <p>Tempo: ${Math.floor(t.tempo_restante/60)}m ${Math.floor(t.tempo_restante%60)}s</p>
+              </div>
+            `;
+            progressoContainer.appendChild(card);
+          }
+        });
+      }
+
+      atualizarProgresso();
+      setInterval(atualizarProgresso, 5000);
+
+      document.getElementById('filter-scheduled').addEventListener('click', () => { currentFilter='scheduled'; atualizarProgresso(); });
+      document.getElementById('filter-progress').addEventListener('click', () => { currentFilter='progress'; atualizarProgresso(); });
+      document.getElementById('filter-completed').addEventListener('click', () => { currentFilter='completed'; atualizarProgresso(); });
+
+      progressoContainer.addEventListener('click', async e => {
+        const hash = e.target.dataset.hash;
+        if (!hash) return;
+        let action;
+        if (e.target.classList.contains('pause-btn')) action = '/api/pause';
+        if (e.target.classList.contains('resume-btn')) action = '/api/resume';
+        if (e.target.classList.contains('delete-btn')) action = '/api/delete';
+        if (action) {
+          await fetch(action, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({hash})
+          });
+          atualizarProgresso();
+        }
+      });
+
+      document.querySelectorAll('.delete-schedule').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          await fetch('/api/delete-schedule', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id})
+          });
+          location.reload();
+        });
+      });
+
+      document.querySelectorAll('.edit-schedule').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const newTime = prompt('Novo horário (HH:MM):');
+          if (newTime) {
+            await fetch('/api/edit-schedule', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({id, time: newTime})
+            });
+            location.reload();
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
